@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<script>
+    $(document).ready(function () {
+        let a = 10;
+        let b = "hi";
+        let output = `${b} Im ${a} years-old`;
+        $("p").text(output);
+    });
+
+    const contacts = {
+        famillyName: '이',
+        name: '영희',
+        age: 22
+    };
+
+    let {
+        famillyName,
+        name,
+        age
+    } = contacts;
+
+    console.log(famillyName);
+    console.log(name);
+    console.log(age);
+
+    const arr = ['영희', 20, '열성적인 자바스크립트', '안녕', '지수', '어떻게 지내니?'];
+
+    // 비구조화를 이용한 값을 얻기
+    const [val1, val2, val3, ...rest] = arr;
+
+    const Func = (restOfArr) => {
+        return restOfArr.filter((item) => {
+            return item
+        }).join(" ");
+    };
+
+    console.log(Func(rest)); // 안녕 지수 어떻게 지내니?
+</script>
+
+<body>
+    <div>
+        <p></p>
+    </div>
+</body>
+
+</html>

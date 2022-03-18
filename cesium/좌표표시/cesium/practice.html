@@ -122,22 +122,54 @@
                     var elementLatitude = document.getElementById("latitude");
                     elementLongitude.innerText = '경도 :' + longitude + '\u00B0';
                     elementLatitude.innerHTML = '위도 :' + latitude + '\u00B0';
-                    showWeather(latitude,longitude);
+                    showWeather(latitude, longitude);
                 } else {
                     //entity.label.show = false;
                 }
             }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 
+            function showPopup(lat, lon, weather, city) {
+                
+                const e = viewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, 32000),
+                    point: {
+                        color: Cesium.Color.SKYBLUE,
+                        pixelSize: 10,
+                        outlineColor: Cesium.Color.YELLOW,
+                        outlineWidth: 3,
+                        //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                    },
+                    label: {
+                        text: city+'\n'+weather,
+                        font: "14pt sans-serif",
+                        //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                        verticalOrigin: Cesium.VerticalOrigin.BASELINE,
+                        fillColor: Cesium.Color.BLACK,
+                        showBackground: true,
+                        backgroundColor: new Cesium.Color(1, 1, 1, 0.7),
+                        backgroundPadding: new Cesium.Cartesian2(8, 4),
+                        // disableDepthTestDistance: Number
+                        // .POSITIVE_INFINITY, // draws the label in front of terrain
+                    },
+                });
+                //viewer.trackedEntity = e;
+            }
 
 
-
-            function showWeather(lat,lon) {
+            function showWeather(lat, lon) {
+                var weather = "";
+                var city = "";
+                var apiURI = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${openweathercode}`;
                 $.ajax({
-
                     type: "GET",
-                    url: "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lon+"&appid=" + 
-                        openweathercode,
+                    url: apiURI,
+                    // data:{
+                    //     "lat" : lat,
+                    //     "lon" : lon,
+                    //     "appid" : openweathercode,
+                    // },
                     dataType: "json",
                     error: function () {
                         alert('통신실패!!');
@@ -146,7 +178,10 @@
                         console.log(obj);
                         alert('성공');
                         //$("p").text(JSON.stringify(obj));
-                        alert(JSON.stringify(obj));
+                        alert(obj.weather[0].main);
+                        weather = obj.weather[0].main;
+                        city = obj.name;
+                        showPopup(lat, lon, weather, city);
                     }
                 });
             }
@@ -505,7 +540,6 @@
                     }
                 });
             });
-
         </script>
     </div>
     <button id="capture" onclick="saveCamera()"
