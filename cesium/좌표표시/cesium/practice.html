@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <!-- Include the CesiumJS JavaScript and CSS files -->
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.90/Build/Cesium/Cesium.js"></script>
+
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.90/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script type="text/javascript" src="../pen_draw.js"></script>
+    <style>
+        @import url(js/Cesium-1.54/Apps/Sandcastle/templates/bucket.css);
+        @import url(../templates/bucket.css);
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer" style="position: absolute;width: 100%; height: 100%; z-index: 500;">
+        <script>
+            // Your access token can be found at: https://cesium.com/ion/tokens.
+            // Replace `your_access_token` with your Cesium ion access token.
+
+            Cesium.Ion.defaultAccessToken =
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZDUzOGM4MC02ZjAyLTQ2YTYtODMwYi04MzNhNzNlYWNkMGQiLCJpZCI6ODM5NzQsImlhdCI6MTY0NjAyNDM3NX0.4k9ULYOPI4R9OmapD5maUt3MXcrGo38n0gKp848nxEc';
+
+            let openweathercode = "0bc2aa1226e50f765a295032d84e4e9b";
+
+            /*
+            var extent = Cesium.Rectangle.fromDegrees(117.896284, 31.499028, 139.597380, 43.311528);
+            Cesium.Camera.DEFAULT_VIEW_RECTANGLE = extent;
+            Cesium.Camera.DEFAULT_VIEW_FACTOR = 0.7;
+            */
+
+            // Initialize the Cesium Viewer in the HTML element with the `cesiumContainer` ID.
+            let viewer = new Cesium.Viewer('cesiumContainer', {
+
+                infoBox: false, //infobox
+                selectionIndicator: false,
+                fullscreenButton: false, //전체화면 버튼
+                baseLayerPicker: false,
+                geocoder: false,
+                homeButton: false, //홈버튼
+                sceneModePicker: false,
+                navigationHelpButton: false,
+                timeline: false, //하단 타임라인
+                animation: false,
+                geocoder: false,
+                //shouldAnimate: false,
+                shouldAnimate: true,
+                contextOptions: {
+                    webgl: {
+                        preserveDrawingBuffer: true
+                    }
+                },
+
+                terrainProvider: Cesium.createWorldTerrain(),
+                navigationInstructionsInitiallyVisible: false,
+                clock: {
+                    currentTime: Cesium.JulianDate.fromIso8601('2013-12-25')
+                }
+            });
+
+            viewer.scene.mode = Cesium.SceneMode.SCENE2D;
+            viewer._cesiumWidget._creditContainer.parentNode.removeChild(viewer._cesiumWidget._creditContainer);
+
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(128.9570124, 35.1592607, 32000),
+                //orientation: {
+                //    heading : heading,
+                //    roll : roll
+                //},
+                duration: 3
+            });
+            // Add Cesium OSM Buildings, a global 3D buildings layer.
+            //const buildingTileset = viewer.scene.primitives.add(Cesium.createOsmBuildings());
+
+
+            /*// Fly the camera to San Francisco at the given longitude, latitude, and height.
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(-122.4175, 37.655, 400),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0.0),
+                    pitch: Cesium.Math.toRadians(-15.0),
+                }
+            });
+            */
+
+            var scene = viewer.scene;
+            let areaPolygonPosition = new Array();
+            /*
+            var entity = viewer.entities.add({
+                label: {
+                    show: true,
+                    showBackground: true,
+                    backgroudColor: Cesium.Color.BLACK,
+                    font: '25px sans-serif',
+                    horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                    verticalOrigin: Cesium.VerticalOrigin.TOP,
+                    pixelOffset: new Cesium.Cartesian2(15, 0)
+                }
+            });
+            */
+
+            var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+            handler.setInputAction(function (movement) {
+                var cartesian = viewer.camera.pickEllipsoid(movement.position, scene.globe.ellipsoid);
+                if (cartesian) {
+                    var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                    var longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                    var latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+                    /*
+                    entity.position = cartesian;
+                    entity.label.show = false;
+                    entity.label.text = '경도 :' + ('' + longitude).slice(-7) + '\u00B0' + '\n위도 :' + ('' +
+                        latitude).slice(-7) + '\u00B0';
+                    */
+                    var elementLongitude = document.getElementById("longitude");
+                    var elementLatitude = document.getElementById("latitude");
+                    elementLongitude.innerText = '경도 :' + longitude + '\u00B0';
+                    elementLatitude.innerHTML = '위도 :' + latitude + '\u00B0';
+                    showWeather(latitude,longitude);
+                } else {
+                    //entity.label.show = false;
+                }
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+
+
+
+
+            function showWeather(lat,lon) {
+                $.ajax({
+
+                    type: "GET",
+                    url: "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lon+"&appid=" + 
+                        openweathercode,
+                    dataType: "json",
+                    error: function () {
+                        alert('통신실패!!');
+                    },
+                    success: function (obj) {
+                        console.log(obj);
+                        alert('성공');
+                        //$("p").text(JSON.stringify(obj));
+                        alert(JSON.stringify(obj));
+                    }
+                });
+            }
+
+
+            /*
+            let camera = viewer.camera;
+
+            function saveCamera() {
+                let position = camera.positionCartographic;
+                let hpr = "";
+                if (defined(camera.heading)) {
+                    hpr = `,${CesiumMath.toDegrees(camera.heading)},${CesiumMath.toDegrees(
+                    camera.pitch
+                    )},${CesiumMath.toDegrees(camera.roll)}`;
+                }
+                endUserOptions.view =
+                    `${CesiumMath.toDegrees(position.longitude)},${CesiumMath.toDegrees(position.latitude)},${position.height}${hpr}`;
+                history.replaceState(undefined, "", `?${objectToQuery(endUserOptions)}`);
+            }
+
+            let timeout;
+            if (endUserOptions.saveCamera !== "false") {
+                camera.changed.addEventListener(function() {
+                    window.clearTimeout(timeout);
+                    timeout = window.setTimeout(saveCamera, 1000);
+                });
+            }*/
+
+
+
+            function penDraw() {
+                // viewer.render ();
+
+                if (!$('#pen').hasClass('active')) {
+                    toolbar_drawing.open(viewer.canvas);
+                } else {
+                    toolbar_drawing.close();
+                }
+            }
+
+            function penDelete() {
+                // viewer.render ();
+
+                if ($('#pen').hasClass('active')) {
+                    //toolbar_drawing.close();
+                } else {
+                    toolbar_drawing.close();
+                }
+            }
+
+            function saveCamera() {
+
+                var targetResolutionScale = 1.0; // for screenshots with higher resolution set to 2.0 or even 3.0
+                var timeout = 1000; // in ms
+                var scene = viewer.scene;
+                if (!scene) {
+
+                    console.error('No scene');
+
+                }
+                var prepareScreenshot = function () {
+
+                    var canvas = scene.canvas;
+
+                    viewer.resolutionScale = targetResolutionScale;
+
+                    scene.preRender.removeEventListener(prepareScreenshot);
+
+                    // take snapshot after defined timeout to allow scene update (ie. loading data)
+
+                    setTimeout(function () {
+
+                        scene.postRender.addEventListener(takeScreenshot);
+
+                    }, timeout);
+
+                }
+
+                var takeScreenshot = function () {
+
+                    scene.postRender.removeEventListener(takeScreenshot);
+
+                    var canvas = scene.canvas;
+
+                    canvas.toBlob(function (blob) {
+
+                        var url = URL.createObjectURL(blob);
+
+                        downloadURI(url, "snapshot - " + targetResolutionScale.toString() + "x.png");
+
+                        // reset resolutionScale
+
+                        viewer.resolutionScale = 1.0;
+
+                    });
+
+                }
+
+                scene.preRender.addEventListener(prepareScreenshot);
+
+                function downloadURI(uri, name) {
+
+                    var link = document.createElement("a");
+
+                    link.download = name;
+
+                    link.href = uri;
+
+                    // mimic click on “download button”
+
+                    document.body.appendChild(link);
+
+                    link.click();
+
+                    document.body.removeChild(link);
+
+                    delete link;
+
+                }
+            }
+            /*
+            function saveCamera() {
+                var targetResolutionScale = 1.0; // for screenshots with higher resolution set to 2.0 or even 3.0
+
+                var timeout = 1000; // in ms
+
+                if (!scene) {
+
+                    console.error('No scene');
+
+                }
+                var prepareScreenshot = function () {
+
+                    var canvas = scene.canvas;
+
+                    viewer.resolutionScale = targetResolutionScale;
+
+                    scene.preRender.removeEventListener(prepareScreenshot);
+
+                    // take snapshot after defined timeout to allow scene update (ie. loading data)
+
+                    setTimeout(function () {
+
+                        scene.postRender.addEventListener(takeScreenshot);
+
+                    }, timeout);
+
+                }
+
+                var takeScreenshot = function () {
+
+                    scene.postRender.removeEventListener(takeScreenshot);
+
+                    var canvas = scene.canvas;
+
+                    canvas.toBlob(function (blob) {
+
+                        var url = URL.createObjectURL(blob);
+
+                        downloadURI(url, "snapshot - " + targetResolutionScale.toString() + "x.png");
+
+                        // reset resolutionScale
+
+                        viewer.resolutionScale = 1.0;
+
+                    });
+
+                }
+
+                scene.preRender.addEventListener(prepareScreenshot);
+
+                function downloadURI(uri, name) {
+
+                    var link = document.createElement("a");
+
+                    link.download = name;
+
+                    link.href = uri;
+
+                    // mimic click on “download button”
+
+                    document.body.appendChild(link);
+
+                    link.click();
+
+                    document.body.removeChild(link);
+
+                    delete link;
+
+                }
+            }
+            */
+            // define callback functions
+
+            viewer.scene.globe.depthTestAgainstTerrain = true;
+
+
+            function DrawTexturedPolygon(istrue) {
+                if (istrue) {
+                    alert("4개의 점을 찍으세요");
+                    handler.setInputAction(function (movement) {
+
+                        var cartesian = viewer.camera.pickEllipsoid(movement.position, scene.globe.ellipsoid);
+                        if (cartesian) {
+                            var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                            var longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                            var latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+                            /*
+                            entity.position = cartesian;
+                            entity.label.show = false;
+                            entity.label.text = '경도 :' + ('' + longitude).slice(-7) + '\u00B0' + '\n위도 :' + ('' +
+                                latitude).slice(-7) + '\u00B0';
+                            */
+                            var elementLongitude = document.getElementById("longitude");
+                            var elementLatitude = document.getElementById("latitude");
+                            elementLongitude.innerText = '경도 :' + longitude + '\u00B0';
+                            elementLatitude.innerHTML = '위도 :' + latitude + '\u00B0';
+                        } else {
+                            //entity.label.show = false;
+                        }
+
+                        let position2 = new Cesium.Cartesian2(movement.position.x, movement.position.y);
+                        areaPolygonPosition.push(position2);
+
+                        if (areaPolygonPosition.length > 4) {
+                            drawPoint(position2, false);
+                        } else {
+                            drawPoint(position2, true);
+                        }
+
+                        if (areaPolygonPosition.length == 4) {
+                            drawpolygon();
+                        }
+                    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                } else {
+                    handler.setInputAction(function (movement) {
+                        var cartesian = viewer.camera.pickEllipsoid(movement.position, scene.globe.ellipsoid);
+                        if (cartesian) {
+                            var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                            var longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                            var latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+                            /*
+                            entity.position = cartesian;
+                            entity.label.show = false;
+                            entity.label.text = '경도 :' + ('' + longitude).slice(-7) + '\u00B0' + '\n위도 :' + ('' +
+                                latitude).slice(-7) + '\u00B0';
+                            */
+                            var elementLongitude = document.getElementById("longitude");
+                            var elementLatitude = document.getElementById("latitude");
+                            elementLongitude.innerText = '경도 :' + longitude + '\u00B0';
+                            elementLatitude.innerHTML = '위도 :' + latitude + '\u00B0';
+                        } else {
+                            //entity.label.show = false;
+                        }
+                    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                }
+
+            }
+
+            function drawPoint(position2, istrue) {
+                if (istrue) {
+                    const e = viewer.entities.add({
+                        position: viewer.camera.pickEllipsoid(position2, scene.globe.ellipsoid),
+                        point: {
+                            color: Cesium.Color.SKYBLUE,
+                            pixelSize: 10,
+                            outlineColor: Cesium.Color.YELLOW,
+                            outlineWidth: 3,
+                            // heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        },
+                    });
+                } else {
+
+                }
+            }
+
+            function drawpolygon() {
+                alert(areaPolygonPosition);
+                const e = viewer.entities.add({
+                    polygon: {
+                        hierarchy: {
+                            positions: [
+                                viewer.camera.pickEllipsoid(areaPolygonPosition[0], scene.globe.ellipsoid),
+                                viewer.camera.pickEllipsoid(areaPolygonPosition[1], scene.globe.ellipsoid),
+                                viewer.camera.pickEllipsoid(areaPolygonPosition[2], scene.globe.ellipsoid),
+                                viewer.camera.pickEllipsoid(areaPolygonPosition[3], scene.globe.ellipsoid)
+                            ]
+                        },
+                        material: Cesium.Color.BLUE.withAlpha(0.5),
+                    },
+                });
+                viewer.zoomTo(e);
+            }
+
+            const polyline = viewer.entities.add({
+                polyline: {
+                    positions: Cesium.Cartesian3.fromDegreesArray([
+                        // -75.60217330403601,
+                        // 40.04102882709425,
+                        // -75.59968252414251,
+                        // 40.04093615560871,
+                        // -75.598020153828,
+                        // 40.04079437042357,
+                        // -75.59674934074435,
+                        // 40.040816173283304,
+                        // -75.59630042791713,
+                        // 40.03986900370842,
+                        // -75.59563636849978,
+                        // 40.03930996506271,
+                        // -75.59492397899098,
+                        // 40.03873932846581,
+                        // -75.59457991226778,
+                        // 40.038392701955786,
+                        // -75.59424838652453,
+                        // 40.03775403572295,
+                        // -75.59387104290336,
+                        // 40.03677022167725,
+                        // -75.59355000490342,
+                        // 40.03588760913535,
+                        128.9570124, 35.1592607,
+                        129.9570124, 36.1592607,
+
+                    ]),
+                    width: 8,
+                    material: new Cesium.PolylineOutlineMaterialProperty({
+                        color: Cesium.Color.YELLOW,
+                        outlineWidth: 2,
+                        outlineColor: Cesium.Color.BLACK,
+                    }),
+                    clampToGround: true,
+                },
+
+            });
+            polyline.polyline.classificationType = Cesium.ClassificationType.BOTH;
+
+
+
+            $(document).ready(function () {
+                $('#polygon').off('click');
+                $('#polygon').on('click', function () {
+                    let _this = $(this);
+                    //면적 계산 기능 실행
+                    if (_this.hasClass('on')) {
+                        _this.removeClass('on');
+                        alert("그리기 중단/삭제");
+                        DrawTexturedPolygon(false);
+                        viewer.entities.removeAll();
+                        areaPolygonPosition = new Array();
+
+                    } else {
+                        _this.addClass('on');
+                        alert("그리기 시작");
+                        DrawTexturedPolygon(true);
+
+                    }
+                });
+            });
+
+        </script>
+    </div>
+    <button id="capture" onclick="saveCamera()"
+        style="position: absolute; border-radius: 15px; padding: 5px; top: 2%; right: 1%; width: 80px; height: 80px; background-color: #fff; z-index: 501;">
+        saveCamera
+    </button>
+
+    <button id="pen" onclick="penDraw()"
+        style="position: absolute; border-radius: 15px; padding: 5px; top: 10%; right: 1%; width: 50px; height: 50px; background-color: #fff; z-index: 501;">
+        draw
+    </button>
+    <button id="pen" onclick="penDelete()"
+        style="position: absolute; border-radius: 15px; padding: 5px; top: 15%; right: 1%; width: 50px; height: 50px; background-color: #fff; z-index: 501;">
+        penDelete
+    </button>
+
+    <button id="polygon"
+        style="position: absolute; border-radius: 15px; padding: 5px; top: 20%; right: 1%; width: 50px; height: 50px; background-color: #fff; z-index: 501;">
+        drawpolygon
+    </button>
+
+    <div id="coordination"
+        style="position: absolute; border-radius: 15px; padding: 5px; bottom: 2%; right: 1%; width: 220px; height: 30px; background-color: #fff; z-index: 501;">
+        <div id="longitude" style="display:inline-block; margin:5px 5px 5px 10px; text-align: center;">
+        </div>
+        <div id="latitude" style="display:inline-block; margin:5px 10px 5px 5px; text-align: center;">
+        </div>
+    </div>
+
+</body>
+
+</html>

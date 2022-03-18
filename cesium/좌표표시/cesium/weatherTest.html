@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <script>
+        let code = "0bc2aa1226e50f765a295032d84e4e9b";
+
+        $(document).ready(function () {
+
+            let obj = $.ajax({
+
+                type: "GET",
+                url: "https://api.openweathermap.org/data/2.5/weather?lat=35&lon=140&appid=" + code,
+                dataType: "json",
+                error: function () {
+                    alert('통신실패!!');
+                },
+                success: function (obj) {
+                    console.log(obj);
+                    alert('성공');
+                    $("p").text(JSON.stringify(obj));
+                }
+            });
+        });
+
+    </script>
+</head>
+
+<body>
+    <div id="dataArea">
+        <p></p>
+    </div>
+</body>
+
+</html>
